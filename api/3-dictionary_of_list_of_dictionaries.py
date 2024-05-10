@@ -1,38 +1,51 @@
 #!/usr/bin/python3
-"""
-    using the REST API for a given employee ID
-    returns informations about his TODO list progress
-"""
-
-
+"""script that, using this REST API, for a given employee ID,
+returns information about his/her TODO list progress."""
+import json
 import requests
-from sys import argv
+import sys
 
 
-def employee_id(employe_id):
-    """returns information about his/her TODO list progress."""
+def get_employee_todo_list_progress():
+    """_summary_
 
-    url = f"https://jsonplaceholder.typicode.com/todos?userId={employe_id}"
-    url_name = f"https://jsonplaceholder.typicode.com/users/{employe_id}"
-    response_name = requests.get(url_name)
-    employee_data = response_name.json()
-    EMPLOYEE_NAME = employee_data['name']
+    Args:
+        employee_id (_type_): _description_
+    """
+    base_url = "https://jsonplaceholder.typicode.com"
+    # Fetch all users
+    users_response = requests.get(f'{base_url}/users')
+    users_data = users_response.json()
 
-    response_todo = requests.get(url)
-    todos = response_todo.json()
+    # Create a dictionary to store tasks for each user
+    all_tasks = {}
 
-    NUMBER_OF_DONE_TASKS = 0
-    for completed in todos:
-        if completed['completed']:
-            NUMBER_OF_DONE_TASKS += 1
-    TOTAL_NUMBER_OF_TASKS = len(todos)
+    for user in users_data:
+        user_id = user.get('id')
+        user_name = user.get('username')
 
-    print(f"Employee {EMPLOYEE_NAME} is done with tasks\
-({NUMBER_OF_DONE_TASKS}/{TOTAL_NUMBER_OF_TASKS}):")
-    for TASK_TITLE in todos:
-        if TASK_TITLE['completed']:
-            print(f"\t {TASK_TITLE['title']}")
+        # Fetch user's TODO list
+        todos_return = requests.get(f'{base_url}/todos?userId={user_id}')
+        todo_data = todos_return.json()
+
+        # Create JSON data format
+        task_list = []
+        for task in todo_data:
+            task_title = task.get('title')
+            task_status = task.get('completed')
+            task_dict = {"username": user_name,
+                         "task": task_title,
+                         "completed": task_status
+                         }
+            task_list.append(task_dict)
+
+            all_tasks[str(user_id)] = task_list
+
+    # Write to JSON file
+    json_filename = 'todo_all_employees.json'
+    with open(json_filename, mode='w') as json_file:
+        json.dump(all_tasks, json_file)
 
 
-if __name__ == "__main__":
-    employee_id(int(argv[1]))
+if __name__ == '__main__':
+    get_employee_todo_list_progress()
